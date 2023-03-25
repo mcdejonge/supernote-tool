@@ -14,6 +14,8 @@
 
 """Decoder classes."""
 
+import base64
+import json
 import numpy as np
 import png
 import queue
@@ -226,9 +228,10 @@ class PngDecoder(BaseDecoder):
             bit per pixel
         """
         r = png.Reader(bytes=data)
-        (width, height, rows, info) = r.read_flat()
+        (width, height, rows, info) = r.asRGBA()
         if width != fileformat.PAGE_WIDTH or height != fileformat.PAGE_HEIGHT:
             raise exceptions.DecoderException(f'invalid size = ({width}, {height}), expected = ({fileformat.PAGE_WIDTH}, {fileformat.PAGE_HEIGHT})')
+        values = [x for row in rows for x in row] # flatten rows
         depth = info['bitdepth']
         greyscale = info['greyscale']
         alpha = info['alpha']
@@ -236,4 +239,28 @@ class PngDecoder(BaseDecoder):
         if alpha:
             ch = ch + 1
         bit_per_pixel = depth * ch
-        return bytes(rows), (fileformat.PAGE_WIDTH, fileformat.PAGE_HEIGHT), bit_per_pixel
+        return bytes(values), (fileformat.PAGE_WIDTH, fileformat.PAGE_HEIGHT), bit_per_pixel
+
+
+class TextDecoder(BaseDecoder):
+    """Decoder for text."""
+
+    def decode(self, data, palette=None, all_blank=False):
+        """Extract text from a realtime recognition data.
+
+        Parameters
+        ----------
+        data : bytes
+            recognition text data (base64 encoded)
+
+        Returns
+        -------
+        list of string
+            list of recognized text
+        """
+        if data is None:
+            return None
+        recogn_json = base64.b64decode(data).decode('utf-8')
+        recogn = json.loads(recogn_json)
+        elements = recogn.get('elements')
+        return list(map(lambda e : e.get('label'), filter(lambda e : e.get('type') == 'Text', elements)))

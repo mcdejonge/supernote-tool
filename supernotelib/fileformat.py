@@ -176,6 +176,9 @@ class Notebook:
     def get_fileid(self):
         return self.metadata.header.get('FILE_ID')
 
+    def is_realtime_recognition(self):
+        return self.metadata.header.get('FILE_RECOGN_TYPE') == '1'
+
 class Cover:
     def __init__(self):
         self.content = None
@@ -278,10 +281,16 @@ class Link:
         return None if self.metadata['PAGEID'] == 'none' else self.metadata['PAGEID']
 
 class Page:
+    RECOGNSTATUS_NONE = 0
+    RECOGNSTATUS_DONE = 1
+    RECOGNSTATUS_RUNNING = 2
+
     def __init__(self, page_info):
         self.metadata = page_info
         self.content = None
         self.totalpath = None
+        self.recogn_file = None
+        self.recogn_text = None
         self.layers = []
         layer_supported = page_info.get(KEY_LAYERS) is not None
         if layer_supported:
@@ -350,6 +359,21 @@ class Page:
 
     def get_pageid(self):
         return self.metadata.get('PAGEID')
+
+    def get_recogn_status(self):
+        return int(self.metadata.get('RECOGNSTATUS'))
+
+    def set_recogn_file(self, recogn_file):
+        self.recogn_file = recogn_file
+
+    def get_recogn_file(self):
+        return self.recogn_file
+
+    def set_recogn_text(self, recogn_text):
+        self.recogn_text = recogn_text
+
+    def get_recogn_text(self):
+        return self.recogn_text
 
 class Layer:
     def __init__(self, layer_info):
